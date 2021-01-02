@@ -2,10 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
-	_ "fmt"
-	_ "github.com/davecgh/go-spew/spew"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -19,14 +16,18 @@ import (
 	"time"
 )
 
+var (
+	store *sessions.CookieStore = sessions.NewCookieStore([]byte("12345678901234567890"))
+)
+
 const (
 	SessionName       = "session-name"
 	ContextSessionKey = "session"
-	ContextDbmapKey   = "dbmap"
 )
 
 type Task struct {
 	Id        int
+	UserId    string
 	Title     string
 	Details   string
 	CreatedAt time.Time
@@ -36,14 +37,6 @@ type User struct {
 	Id       int    `json:"id"`
 	UserId   string `json:"user_id"`
 	Password string `json:"password"`
-}
-
-type JWT struct {
-	Token string `json:"token"`
-}
-
-type Error struct {
-	Message string `json:"message"`
 }
 
 func ChangeMethodsMiddleware(next http.Handler) http.Handler {
@@ -62,6 +55,18 @@ func ChangeMethodsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func sessionMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := store.Get(r, SessionName)
+		if err != nil {
+			panic(err.Error())
+		}
+		context.Set(r, ContextSessionKey, session)
+		next.ServeHTTP(w, r)
+	})
+
+}
+
 var Db *sql.DB
 
 func init() {
@@ -78,12 +83,6 @@ func init() {
 	logger = log.New(file, "INFO ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-func errorInResponse(w http.ResponseWriter, status int, error Error) {
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(error)
-	return
-}
-
 func CreateUser(user_id string, password string) {
 	stmt, err := Db.Prepare("INSERT INTO users (user_id, password) VALUES (?, ?);")
 	if err != nil {
@@ -92,8 +91,14 @@ func CreateUser(user_id string, password string) {
 	stmt.Exec(user_id, password)
 }
 
-func GetAllTasks() (tasks []Task, err error) {
-	rows, err := Db.Query("SELECT * FROM tasks;")
+func GetUser(user_id string, password string) (user User, err error) {
+	user = User{}
+	err = Db.QueryRow("SELECT * FROM users WHERE user_id = ? AND password = ?;", user_id, password).Scan(&user.Id, &user.UserId, &user.Password)
+	return
+}
+
+func GetAllTasks(user_id string) (tasks []Task, err error) {
+	rows, err := Db.Query("SELECT * FROM tasks WHERE user_id = ?;", user_id)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -101,7 +106,7 @@ func GetAllTasks() (tasks []Task, err error) {
 
 	for rows.Next() {
 		task := Task{}
-		err := rows.Scan(&task.Id, &task.Title, &task.Details, &task.CreatedAt)
+		err := rows.Scan(&task.Id, &task.UserId, &task.Title, &task.Details, &task.CreatedAt)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -112,16 +117,16 @@ func GetAllTasks() (tasks []Task, err error) {
 
 func GetTask(id string) (task Task, err error) {
 	task = Task{}
-	err = Db.QueryRow("SELECT * FROM tasks WHERE id = ?;", id).Scan(&task.Id, &task.Title, &task.Details, &task.CreatedAt)
+	err = Db.QueryRow("SELECT * FROM tasks WHERE id = ?;", id).Scan(&task.Id, &task.UserId, &task.Title, &task.Details, &task.CreatedAt)
 	return
 }
 
-func CreatTask(title string, details string) {
-	stmt, err := Db.Prepare("INSERT INTO tasks (title, details) VALUES (?, ?);")
+func CreatTask(user_id string, title string, details string) {
+	stmt, err := Db.Prepare("INSERT INTO tasks (user_id, title, details) VALUES (?, ?, ?);")
 	if err != nil {
 		panic(err.Error())
 	}
-	stmt.Exec(title, details)
+	stmt.Exec(user_id, title, details)
 }
 
 func DeleteTask(id string) {
@@ -160,6 +165,18 @@ func getSession(r *http.Request) (*sessions.Session, error) {
 	return nil, errors.New("failed to get session")
 }
 
+func getUserIdFromSession(r *http.Request) (string, error) {
+	session, err := getSession(r)
+	if err != nil {
+		panic(err.Error())
+	}
+	if v, ok := session.Values["user_id"]; ok {
+		return v.(string), nil
+	} else {
+		return "", errors.New("user_id not found")
+	}
+}
+
 func handleSignUpGET(w http.ResponseWriter, r *http.Request) {
 	t, _ := template.ParseFiles("signup_tmpl.html")
 	t.Execute(w, nil)
@@ -185,9 +202,70 @@ func handleSignUpPOST(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func handleLogInGET(w http.ResponseWriter, r *http.Request) {
+	t, _ := template.ParseFiles("login.html")
+	t.Execute(w, nil)
+}
+
+func handleLogInPOST(w http.ResponseWriter, r *http.Request) {
+	info("handleLogInPOST method is called")
+	r.ParseForm()
+	user_id := r.PostForm["user_id"][0]
+	password := r.PostForm["password"][0]
+	if user_id == "" || password == "" {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	user, err := GetUser(user_id, password)
+	if err != nil {
+		log.Println(err)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	}
+	session, err := getSession(r)
+	if err != nil {
+		panic(err.Error())
+	}
+	session.Values["user_id"] = user.UserId
+	session.Save(r, w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+
+func handleLogOutGET(w http.ResponseWriter, r *http.Request) {
+	t, _ := template.ParseFiles("logout.html")
+	t.Execute(w, nil)
+}
+
+func handleLogOutPOST(w http.ResponseWriter, r *http.Request) {
+	session, err := getSession(r)
+	if err != nil {
+		panic(err.Error())
+	}
+	delete(session.Values, "user_id")
+	session.Save(r, w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func handleRoot(w http.ResponseWriter, r *http.Request) {
+	type page struct {
+		UserId string
+	}
+	p := &page{}
+	user_id, err := getUserIdFromSession(r)
+	log.Println(user_id)
+	if err == nil {
+		p.UserId = user_id
+	}
+	log.Println(p)
+	t, _ := template.ParseFiles("index_tmpl.html")
+	t.Execute(w, p)
+}
+
 func handleGetAllTasks(w http.ResponseWriter, r *http.Request) {
 	info("GetAllTasks")
-	tasks, err := GetAllTasks()
+	user_id, _ := getUserIdFromSession(r)
+	tasks, err := GetAllTasks(user_id)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -220,9 +298,13 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 
 func handleRegisterTask(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	title := r.PostForm["title"]
-	details := r.PostForm["details"]
-	CreatTask(title[0], details[0])
+	user_id, err := getUserIdFromSession(r)
+	if err != nil {
+		panic(err.Error())
+	}
+	title := r.PostForm["title"][0]
+	details := r.PostForm["details"][0]
+	CreatTask(user_id, title, details)
 	http.Redirect(w, r, "/list", 301)
 }
 
@@ -281,8 +363,14 @@ func warning(args ...interface{}) {
 func main() {
 	r := mux.NewRouter()
 	r.Use(ChangeMethodsMiddleware)
-	// r.HandleFunc("/signup", handleSignUpGET).Methods("GET")
-	// r.HandleFunc("/signup", handleSignUpPOST).Methods("POST")
+	r.Use(sessionMiddleware)
+	r.HandleFunc("/", handleRoot).Methods("GET")
+	r.HandleFunc("/signup", handleSignUpGET).Methods("GET")
+	r.HandleFunc("/signup", handleSignUpPOST).Methods("POST")
+	r.HandleFunc("/login", handleLogInGET).Methods("GET")
+	r.HandleFunc("/login", handleLogInPOST).Methods("POST")
+	r.HandleFunc("/logout", handleLogOutGET).Methods("GET")
+	r.HandleFunc("/logout", handleLogOutPOST).Methods("POST")
 	r.HandleFunc("/list", handleGetAllTasks).Methods("GET")
 	r.HandleFunc("/list/{id:[0-9]+}", handleGetTask).Methods("GET")
 	r.HandleFunc("/create", handleCreateTask).Methods("GET")

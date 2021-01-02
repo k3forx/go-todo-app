@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <title>TOP</title>
+  </head>
+  <body>
+    {{ if .UserId }}
+    <p>
+      <a href="/list">List of ToDo</a>
+    </p>
+    <p>
+      <a href="/logout">Logout</a>
+    </p>
+    {{ else }}
+    <p>
+      <a href="/signup">Sign Up</a>
+    </p>
+    <p>
+      <a href="/login">login</a>
+    </p>
+    {{ end }}
+  </body>
+</html>

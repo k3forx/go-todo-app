@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Go Web Programming</title>
+  </head>
+  <body>
+    <ul>
+      <input
+        type="button"
+        onclick="location.href='/create'"
+        value="Add a new Task"
+      />
+      {{ range . }}
+      <li><a href="/list/{{ . | getId }}">{{ . | getTitle}}</a></li>
+      {{ else }} There is no tasks. {{ end}}
+    </ul>
+  </body>
+</html>

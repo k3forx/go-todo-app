@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Go Web Programming</title>
+  </head>
+  <body>
+    <h1>Sign Up</h1>
+    <form
+      class="contact-form"
+      action="/signup"
+      method="post"
+      enctype="application/x-www-form-urlencoded"
+    >
+      <h2>Fill in following information</h2>
+      <div class="item">
+        <label class="label" for="user_id" name="user_id">User Name</label>
+        <input id="user_id" type="text" name="user_id" />
+      </div>
+      <div class="item">
+        <label class="label" for="password" name="password">Password</label>
+        <input id="password" type="text" name="password" />
+      </div>
+
+      <div class="item no-label">
+        <input type="submit" />
+      </div>
+    </form>
+
+    <style>
+      .contact-form {
+        border: 1px solid #ccc;
+        padding: 10px;
+        font-size: 13px;
+        font-family: sans-serif;
+      }
+      .contact-form .item {
+        display: block;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+      .contact-form .item.no-label {
+        padding: 5px 0px 5px 60px;
+      }
+      .contact-form .item .label {
+        float: left;
+        padding: 5px;
+        margin: 0;
+      }
+      .contact-form .item .radio-group {
+        padding: 5px 0px 5px 60px;
+      }
+      .contact-form .item input[type="text"],
+      .contact-form .item input[type="email"],
+      .contact-form .item textarea {
+        display: block;
+        margin-left: 60px;
+        width: 200px;
+        padding: 5px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+        font-size: 13px;
+      }
+      .contact-form .item ::placeholder {
+        color: #ccc;
+      }
+      .contact-form .item textarea {
+        outline: none;
+        border: 1px solid #ccc;
+        resize: vertical;
+      }
+      input[type="submit"] {
+        border: none;
+        outline: none;
+        display: block;
+        line-height: 30px;
+        width: 160px;
+        text-align: center;
+        font-size: 13px;
+        color: #fff;
+        background-color: #696;
+        border-bottom: 4px solid #464;
+        cursor: pointer;
+
+        box-sizing: content-box;
+        transition: 0.3s ease all;
+      }
+      input[type="submit"]:hover {
+        border-bottom-width: 0;
+        transform: translateY(4px);
+      }
+    </style>
+  </body>
+</html>

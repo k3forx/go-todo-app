@@ -2,8 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
+	"errors"
+	_ "fmt"
+	_ "github.com/davecgh/go-spew/spew"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"html/template"
 	"log"
 	"net/http"
@@ -11,18 +17,12 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	_ "fmt"
-	"encoding/json"
-	_ "github.com/davecgh/go-spew/spew"
-	"github.com/gorilla/context"
-	"github.com/gorilla/sessions"
-	"errors"
 )
 
 const (
-	SessionName = "session-name"
+	SessionName       = "session-name"
 	ContextSessionKey = "session"
-	ContextDbmapKey = "dbmap"
+	ContextDbmapKey   = "dbmap"
 )
 
 type Task struct {
@@ -33,17 +33,17 @@ type Task struct {
 }
 
 type User struct {
-    Id       int    `json:"id"`
-    UserId    string `json:"user_id"`
-    Password string `json:"password"`
+	Id       int    `json:"id"`
+	UserId   string `json:"user_id"`
+	Password string `json:"password"`
 }
 
 type JWT struct {
-    Token string `json:"token"`
+	Token string `json:"token"`
 }
 
 type Error struct {
-    Message string `json:"message"`
+	Message string `json:"message"`
 }
 
 func ChangeMethodsMiddleware(next http.Handler) http.Handler {
@@ -66,7 +66,7 @@ var Db *sql.DB
 
 func init() {
 	var err error
-	Db, err = sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/todo?parseTime=true")
+	Db, err = sql.Open("mysql", "dummy:@tcp(127.0.0.1:3306)/todo?parseTime=true")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -79,9 +79,9 @@ func init() {
 }
 
 func errorInResponse(w http.ResponseWriter, status int, error Error) {
-    w.WriteHeader(status)
-    json.NewEncoder(w).Encode(error)
-    return
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(error)
+	return
 }
 
 func CreateUser(user_id string, password string) {

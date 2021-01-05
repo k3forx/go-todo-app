@@ -231,7 +231,6 @@ func handleLogInPOST(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-
 func handleLogOutGET(w http.ResponseWriter, r *http.Request) {
 	t, _ := template.ParseFiles("logout.html")
 	t.Execute(w, nil)
@@ -379,5 +378,5 @@ func main() {
 	r.HandleFunc("/update", handleUpdateTask)
 	r.HandleFunc("/delete/{id:[0-9]+}", handleDeleteTask)
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":12345", r))
 }

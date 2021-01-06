@@ -1,0 +1,27 @@
+version: "3"
+services:
+  mysql:
+    container_name: todo-db
+    image: mysql:8.0
+    hostname: todo-db
+    environment:
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: todo
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  golang:
+    build:
+      context: .
+      dockerfile: ./docker/golang/Dockerfile
+    image: go-todo-app:v1.0
+    depends_on:
+      - mysql
+    container_name: todo-app
+    ports:
+      - "8080:12345"
+    volumes:
+      - .:/go/src/go-todo-app
+    command: ["sh", "run.sh"]

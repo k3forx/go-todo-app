@@ -71,7 +71,7 @@ var Db *sql.DB
 
 func init() {
 	var err error
-	Db, err = sql.Open("mysql", "dummy:@tcp(127.0.0.1:3306)/todo?parseTime=true")
+	Db, err = sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/todo?parseTime=true")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -178,7 +178,7 @@ func getUserIdFromSession(r *http.Request) (string, error) {
 }
 
 func handleSignUpGET(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.ParseFiles("signup_tmpl.html")
+	t, _ := template.ParseFiles("templates/signup_tmpl.html")
 	t.Execute(w, nil)
 }
 
@@ -203,7 +203,7 @@ func handleSignUpPOST(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLogInGET(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.ParseFiles("login.html")
+	t, _ := template.ParseFiles("templates/login.html")
 	t.Execute(w, nil)
 }
 
@@ -232,7 +232,7 @@ func handleLogInPOST(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLogOutGET(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.ParseFiles("logout.html")
+	t, _ := template.ParseFiles("templates/logout.html")
 	t.Execute(w, nil)
 }
 
@@ -257,7 +257,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 		p.UserId = user_id
 	}
 	log.Println(p)
-	t, _ := template.ParseFiles("index_tmpl.html")
+	t, _ := template.ParseFiles("templates/index_tmpl.html")
 	t.Execute(w, p)
 }
 
@@ -269,8 +269,8 @@ func handleGetAllTasks(w http.ResponseWriter, r *http.Request) {
 		panic(err.Error())
 	}
 	funcMap := template.FuncMap{"getTitle": getTitle, "getId": getId}
-	t := template.New("list_tmpl.html").Funcs(funcMap)
-	t, _ = t.ParseFiles("list_tmpl.html")
+	t := template.New("templates/list_tmpl.html").Funcs(funcMap)
+	t, _ = t.ParseFiles("templates/list_tmpl.html")
 	t.Execute(w, tasks)
 }
 
@@ -284,14 +284,14 @@ func handleGetTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	funcMap := template.FuncMap{"getTitle": getTitle, "getId": getId, "getDetails": getDetails}
-	t := template.New("details_tmpl.html").Funcs(funcMap)
-	t, _ = t.ParseFiles("details_tmpl.html")
+	t := template.New("templates/details_tmpl.html").Funcs(funcMap)
+	t, _ = t.ParseFiles("templates/details_tmpl.html")
 	t.Execute(w, task)
 }
 
 func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	// this uri is static ?
-	t, _ := template.ParseFiles("create_tmpl.html")
+	t, _ := template.ParseFiles("templates/create_tmpl.html")
 	t.Execute(w, nil)
 }
 
@@ -317,8 +317,8 @@ func handleEditTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	funcMap := template.FuncMap{"getTitle": getTitle, "getId": getId, "getDetails": getDetails}
-	t := template.New("edit_tmpl.html").Funcs(funcMap)
-	t, _ = t.ParseFiles("edit_tmpl.html")
+	t := template.New("templates/edit_tmpl.html").Funcs(funcMap)
+	t, _ = t.ParseFiles("templates/edit_tmpl.html")
 	t.Execute(w, task)
 }
 
